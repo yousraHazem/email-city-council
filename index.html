@@ -280,16 +280,28 @@ function mailParams() {
   if (!emails) { toast("Select at least one recipient first."); return null; }
   return { emails, subject: $("subject").value, body: $("body").value };
 }
+// Gmail's web compose URL drops its fields on phones, so hand off to the app there.
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(navigator.userAgent);
+function mailQuery(m) {
+  return `bcc=${encodeURIComponent(m.emails)}&subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
+}
 function openGmail() {
   const m = mailParams(); if (!m) return;
-  const p = new URLSearchParams({ view: "cm", fs: "1", su: m.subject, body: m.body });
-  p.set("bcc", m.emails);
-  window.open("https://mail.google.com/mail/?" + p.toString(), "_blank", "noopener");
+  if (isIOS) {
+    location.href = "googlegmail:///co?" + mailQuery(m);
+    // If the Gmail app isn't installed the page stays visible; fall back to the default mail app.
+    setTimeout(() => { if (!document.hidden) location.href = "mailto:?" + mailQuery(m); }, 1500);
+  } else if (isAndroid) {
+    location.href = "mailto:?" + mailQuery(m);
+  } else {
+    const p = new URLSearchParams({ view: "cm", fs: "1", bcc: m.emails, su: m.subject, body: m.body });
+    window.open("https://mail.google.com/mail/?" + p.toString(), "_blank", "noopener");
+  }
 }
 function openMailto() {
   const m = mailParams(); if (!m) return;
-  const q = `subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
-  location.href = `mailto:?bcc=${m.emails}&${q}`;
+  location.href = "mailto:?" + mailQuery(m);
 }
 async function copy(text, msg) {
   try { await navigator.clipboard.writeText(text); toast(msg); }
