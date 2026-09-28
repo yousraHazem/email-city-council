@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Write Your Ward</title>
+<style>
+  :root {
+    --bg: #f7f6f3; --card: #fff; --text: #1d1d1b; --muted: #6b6a66; --line: #e2e0da;
+    --accent: #1f6f5c; --accent-text: #fff; --warn: #9a5b00; --err: #a3281f;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151514; --card: #1f1f1d; --text: #ecebe7; --muted: #a3a29c; --line: #34332f;
+      --accent: #5bbf9f; --accent-text: #0d1f1a; --warn: #e0a64a; --err: #f08a80;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 32px 16px 64px; }
+  main { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .lede { color: var(--muted); margin: 0 0 24px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 20px; margin-bottom: 16px; }
+  h2 { font-size: 1rem; margin: 0 0 12px; display: flex; gap: 8px; align-items: baseline; }
+  h2 .n { color: var(--muted); font-weight: 500; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+  input[type=text], select, textarea {
+    width: 100%; font: inherit; color: inherit; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+  textarea { min-height: 360px; resize: vertical; line-height: 1.55; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 180px; }
+  .field { margin-bottom: 12px; }
+  button { font: inherit; cursor: pointer; border-radius: 6px; padding: 8px 14px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button.link { border: 0; background: none; color: var(--accent); padding: 4px 0; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .status { margin-top: 10px; font-size: .9rem; }
+  .status.warn { color: var(--warn); } .status.err { color: var(--err); }
+  .ward-badge { font-size: 1.1rem; font-weight: 600; }
+  .people { list-style: none; padding: 0; margin: 8px 0 0; columns: 2 220px; }
+  .people li { break-inside: avoid; padding: 3px 0; }
+  .people label { display: flex; gap: 8px; color: var(--text); font-size: .95rem; margin: 0; }
+  .people small { color: var(--muted); display: block; }
+  .req { display: flex; gap: 8px; margin-bottom: 8px; }
+  .req input { flex: 1; }
+  .req button { padding: 6px 10px; }
+  .muted { color: var(--muted); font-size: .85rem; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 6px; font-size: .9rem; }
+  footer { color: var(--muted); font-size: .8rem; margin-top: 24px; }
+  footer a, .muted a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Write Your Ward</h1>
+  <p class="lede">Find your Mississauga ward, then email every candidate running there about the threats against Islamic schools.</p>
+
+  <section>
+    <h2><span class="n">1</span> Find your ward</h2>
+    <div class="row">
+      <div class="field"><label for="name">Your name</label><input type="text" id="name" autocomplete="name"></div>
+      <div class="field"><label for="postal">Postal code</label><input type="text" id="postal" placeholder="L5B 3C1" autocomplete="postal-code"></div>
+    </div>
+    <div class="field">
+      <label for="street">Street address <span class="muted">(optional, helps when the postal code alone isn't found or sits near a ward boundary)</span></label>
+      <input type="text" id="street" placeholder="300 City Centre Dr" autocomplete="address-line1">
+    </div>
+    <button class="primary" id="find">Find my ward</button>
+    <div class="status" id="status"></div>
+    <div class="field" style="margin-top:12px">
+      <label for="ward">Ward <span class="muted">(correct it here if needed; <a href="https://www.mississauga.ca/council/find-your-councillor/" target="_blank" rel="noopener">confirm with the City</a>)</span></label>
+      <select id="ward"><option value="">Select a ward</option></select>
+    </div>
+  </section>
+
+  <section id="recipients-section">
+    <h2><span class="n">2</span> Recipients</h2>
+    <div id="recipients"><p class="muted">Pick a ward to see its councillor candidates.</p></div>
+    <p style="margin:12px 0 0"><label style="display:flex;gap:8px;color:var(--text)"><input type="checkbox" id="incl-mayor"> Also email the mayoral candidates</label></p>
+    <ul class="people" id="mayor-list" hidden></ul>
+    <p class="muted" style="margin-top:12px">Candidate emails from <a href="https://mississaugavotes.ca/2026-municipal-election/for-voters/whos-running/" target="_blank" rel="noopener">Mississauga Votes: Who's running</a>. Candidates with no public email are listed but can't be selected.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span> Your requests</h2>
+    <div id="requests"></div>
+    <button class="link" id="add-req">+ Add a request</button>
+    <button class="link" id="reset-req" style="margin-left:12px">Reset to defaults</button>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span> Review and send</h2>
+    <div class="field"><label for="subject">Subject</label><input type="text" id="subject"></div>
+    <div class="field">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <label for="body">Message <span class="muted">(edit freely)</span></label>
+        <button type="button" class="link" id="regen" style="font-size:.85rem">Regenerate from the form</button>
+      </div>
+      <textarea id="body"></textarea></div>
+    <div class="actions">
+      <button class="primary" id="gmail">Open in Gmail</button>
+      <button id="mailto">Open in email app</button>
+      <button id="copy-to">Copy recipients</button>
+      <button id="copy-body">Copy message</button>
+    </div>
+    <p class="muted" id="count"></p>
+  </section>
+
+  <footer>
+    Address lookup by <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap Nominatim</a>. Ward boundaries from <a href="https://data.mississauga.ca/datasets/ward-boundaries" target="_blank" rel="noopener">Mississauga Open Data</a>. Nothing you type leaves your browser except the address lookup.
+  </footer>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="data/wards.js"></script>
+<script src="data/candidates.js"></script>
+<script>
+const DEFAULT_REQUESTS = [
+  "Commitment regarding Police budget allocation for Islamic schools across Peel.",
+  "Followup on recent threats directed at Islamic schools and accountability to those who carried out this act.",
+];
+
+const $ = id => document.getElementById(id);
+let requests = [...DEFAULT_REQUESTS];
+let bodyEdited = false;
+
+// ---- ward lookup ----
+function inRing([x, y], ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function inPolygon(pt, rings) {
+  return inRing(pt, rings[0]) && !rings.slice(1).some(h => inRing(pt, h));
+}
+function wardAt(lon, lat) {
+  for (const f of WARDS.features) {
+    const g = f.geometry;
+    const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+    if (polys.some(p => inPolygon([lon, lat], p))) return f.properties.WARD;
+  }
+  return null;
+}
+
+async function nominatim(params) {
+  const url = "https://nominatim.openstreetmap.org/search?" +
+    new URLSearchParams({ format: "json", limit: "1", countrycodes: "ca", ...params });
+  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!res.ok) throw new Error("Lookup service returned " + res.status);
+  const [hit] = await res.json();
+  // Ignore city-wide fallbacks, which would just land on the city centre.
+  if (!hit || ["city", "town", "municipality", "county", "state", "country"].includes(hit.addresstype)) return null;
+  return hit;
+}
+
+async function findWard() {
+  const postal = $("postal").value.trim().toUpperCase().replace(/\s+/g, "");
+  const street = $("street").value.trim();
+  const status = $("status");
+  const fmtPostal = postal.length === 6 ? postal.slice(0, 3) + " " + postal.slice(3) : postal;
+
+  if (!street && !/^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(postal)) {
+    return setStatus("Enter a postal code like L5B 3C1.", "err");
+  }
+  setStatus("Looking up…");
+  try {
+    let hit = null;
+    if (street) hit = await nominatim({ q: `${street}, Mississauga, Ontario ${fmtPostal}` });
+    if (!hit && postal) hit = await nominatim({ postalcode: fmtPostal });
+    if (!hit) {
+      return setStatus("Couldn't place that postal code. Add your street address above and try again, or pick your ward from the list.", "warn");
+    }
+    const ward = wardAt(+hit.lon, +hit.lat);
+    if (!ward) return setStatus(`That location (${hit.display_name}) is outside Mississauga's wards.`, "err");
+    $("ward").value = ward;
+    setStatus(`<span class="ward-badge">Ward ${ward}</span> <span class="muted">based on ${escapeHtml(hit.display_name)}</span>`);
+    onWardChange();
+  } catch (e) {
+    setStatus("Lookup failed (" + e.message + "). Pick your ward from the list instead.", "err");
+  }
+}
+function setStatus(html, cls = "") { const s = $("status"); s.className = "status " + cls; s.innerHTML = html; }
+
+// ---- recipients ----
+function personItem(p, checked) {
+  const li = document.createElement("li");
+  li.innerHTML = `<label><input type="checkbox" ${p.email && checked ? "checked" : ""} ${p.email ? "" : "disabled"} data-email="${p.email || ""}" data-name="${escapeHtml(p.name)}">
+    <span>${escapeHtml(p.name)}<small>${p.email ? escapeHtml(p.email) : "no public email"}</small></span></label>`;
+  return li;
+}
+function onWardChange() {
+  const ward = $("ward").value;
+  const box = $("recipients");
+  box.innerHTML = "";
+  if (!ward) { box.innerHTML = '<p class="muted">Pick a ward to see its councillor candidates.</p>'; }
+  else {
+    const people = CANDIDATES.wards[ward] || [];
+    box.innerHTML = `<p style="margin:0"><strong>Councillor candidates, Ward ${ward}</strong> <span class="muted">(${people.length})</span></p>`;
+    const ul = document.createElement("ul"); ul.className = "people";
+    people.forEach(p => ul.appendChild(personItem(p, true)));
+    box.appendChild(ul);
+  }
+  refresh();
+}
+function renderMayor() {
+  const ul = $("mayor-list"); ul.innerHTML = "";
+  CANDIDATES.mayor.forEach(p => ul.appendChild(personItem(p, true)));
+  ul.hidden = !$("incl-mayor").checked;
+}
+function selectedEmails() {
+  const boxes = [...$("recipients").querySelectorAll("input:checked")];
+  if ($("incl-mayor").checked) boxes.push(...$("mayor-list").querySelectorAll("input:checked"));
+  return [...new Set(boxes.map(b => b.dataset.email).filter(Boolean))];
+}
+
+// ---- requests ----
+function renderRequests() {
+  const box = $("requests"); box.innerHTML = "";
+  requests.forEach((r, i) => {
+    const row = document.createElement("div"); row.className = "req";
+    const input = document.createElement("input"); input.type = "text"; input.value = r;
+    input.oninput = () => { requests[i] = input.value; refresh(); };
+    const del = document.createElement("button"); del.textContent = "Remove"; del.title = "Remove this request";
+    del.onclick = () => { requests.splice(i, 1); renderRequests(); refresh(); };
+    row.append(input, del); box.appendChild(row);
+  });
+}
+
+// ---- draft ----
+function draft() {
+  const ward = $("ward").value;
+  const name = $("name").value.trim() || "[Your name]";
+  const reqs = requests.map(r => r.trim()).filter(Boolean);
+  const wardTxt = ward ? `Ward ${ward}` : "[your ward]";
+  const greeting = $("incl-mayor").checked ? `Dear Mayoral and ${wardTxt} Council Candidates` : `Dear ${wardTxt} Council Candidates`;
+
+  const subject = `Protecting Islamic schools in Peel: a question from a ${wardTxt} voter`;
+  const body = [
+`${greeting},`,
+``,
+`My name is ${name}, and I am a resident of ${wardTxt} in Mississauga. I am writing to ask where you stand on the safety of Islamic schools in our community ahead of the October 26 municipal election.`,
+``,
+`In late September, nine schools operated by the Muslim Association of Canada in Ontario, British Columbia and Quebec received the same anonymous email, signed "Citizen Vigilante," threatening the "slaughter" of Muslims and vowing that Canada will be "Islam free." Peel Regional Police increased patrols near mosques and schools, and its hate crime unit is investigating. Children were the target of these threats, and families here in Mississauga are now sending their kids to school under paid security.`,
+``,
+`As someone asking to represent ${wardTxt}, I would like a clear answer on the following:`,
+``,
+...reqs.map((r, i) => `${i + 1}. ${r}`),
+``,
+`I would appreciate a response before election day so that I can take it into account when I vote.`,
+``,
+`Sincerely,`,
+name,
+`${wardTxt}, Mississauga`,
+  ].join("\n");
+  return { subject, body };
+}
+function refresh() {
+  if (!bodyEdited) {
+    const d = draft();
+    $("subject").value = d.subject;
+    $("body").value = d.body;
+  }
+  const n = selectedEmails().length;
+  $("count").textContent = n ? `${n} recipient${n === 1 ? "" : "s"} selected, sent as Bcc so candidates don't see each other's addresses.` : "No recipients selected yet.";
+}
+
+// ---- send ----
+function mailParams() {
+  const emails = selectedEmails().join(",");
+  if (!emails) { toast("Select at least one recipient first."); return null; }
+  return { emails, subject: $("subject").value, body: $("body").value };
+}
+function openGmail() {
+  const m = mailParams(); if (!m) return;
+  const p = new URLSearchParams({ view: "cm", fs: "1", su: m.subject, body: m.body });
+  p.set("bcc", m.emails);
+  window.open("https://mail.google.com/mail/?" + p.toString(), "_blank", "noopener");
+}
+function openMailto() {
+  const m = mailParams(); if (!m) return;
+  const q = `subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
+  location.href = `mailto:?bcc=${m.emails}&${q}`;
+}
+async function copy(text, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg); }
+  catch { toast("Couldn't copy. Select the text and copy it manually."); }
+}
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2200);
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+// ---- wire up ----
+Object.keys(CANDIDATES.wards).sort((a, b) => a - b).forEach(w => $("ward").add(new Option("Ward " + w, w)));
+$("find").onclick = findWard;
+$("postal").onkeydown = $("street").onkeydown = e => { if (e.key === "Enter") findWard(); };
+$("ward").onchange = onWardChange;
+$("name").oninput = refresh;
+$("incl-mayor").onchange = () => { $("mayor-list").hidden = !$("incl-mayor").checked; refresh(); };
+document.addEventListener("change", e => { if (e.target.matches(".people input")) refresh(); });
+$("add-req").onclick = () => { requests.push(""); renderRequests(); $("requests").lastChild.querySelector("input").focus(); };
+$("reset-req").onclick = () => { requests = [...DEFAULT_REQUESTS]; renderRequests(); refresh(); };
+$("body").oninput = $("subject").oninput = () => { bodyEdited = true; };
+$("regen").onclick = () => { bodyEdited = false; refresh(); toast("Message regenerated from the form."); };
+$("gmail").onclick = openGmail;
+$("mailto").onclick = openMailto;
+$("copy-to").onclick = () => { const e = selectedEmails(); e.length ? copy(e.join(", "), `Copied ${e.length} addresses.`) : toast("Select at least one recipient first."); };
+$("copy-body").onclick = () => copy(`Subject: ${$("subject").value}\n\n${$("body").value}`, "Message copied.");
+
+renderMayor();
+renderRequests();
+refresh();
+</script>
+</body>
+</html>
